@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { initDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import habitsRoutes from './routes/habits.js';
 import tasksRoutes from './routes/tasks.js';
@@ -78,7 +79,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Tracker Server running at http://localhost:${PORT}`);
-});
+// Boot server after initializing database connection
+async function startServer() {
+  await initDb();
+  app.listen(PORT, () => {
+    console.log(`🚀 Tracker Server running at http://localhost:${PORT}`);
+  });
+}
+
+startServer();
+
 
