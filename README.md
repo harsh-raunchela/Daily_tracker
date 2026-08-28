@@ -1,5 +1,10 @@
 # 🌌 Daily Tracker & Personal Productivity Operating System
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Online-success?style=for-the-badge&logo=render&logoColor=white)](https://daily-tracker-1-vf93.onrender.com)
+[![GitHub License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](./LICENSE)
+
+> 🚀 **Live Deployed App:** [https://daily-tracker-1-vf93.onrender.com](https://daily-tracker-1-vf93.onrender.com)
+
 A modern, full-stack personal productivity and self-reflection system combining **Habit Tracking**, **Daily Task Management**, **Reflective Journaling**, **Transparent Performance Scoring**, and **Milestone Rewards**.
 
 ---
