@@ -1,0 +1,22 @@
+{
+  "name": "personal-tracker-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm --prefix client install && npm --prefix server install",
+    "build": "npm --prefix client install && npm --prefix client run build && npm --prefix server install",
+    "start": "node server/src/index.js",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev"
+  },
+  "keywords": [
+    "habit-tracker",
+    "journal",
+    "productivity",
+    "scoring",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "ISC"
+}

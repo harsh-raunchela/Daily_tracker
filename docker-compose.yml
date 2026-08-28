@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  tracker:
+    build: .
+    container_name: tracker-app
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - JWT_SECRET=tracker-production-jwt-secret-replace-with-random-key
+    volumes:
+      - ./server/data:/app/server/data
+    restart: unless-stopped
