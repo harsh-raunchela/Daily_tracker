@@ -203,5 +203,10 @@ export const api = {
   getAnalytics: () =>
     fetch(`${BASE_URL}/analytics/overview`, {
       headers: getAuthHeaders()
+    }).then(handleResponse),
+
+  getAnalyticsOverview: () =>
+    fetch(`${BASE_URL}/analytics/overview`, {
+      headers: getAuthHeaders()
     }).then(handleResponse)
 };

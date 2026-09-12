@@ -33,10 +33,12 @@ export function AnalyticsPage() {
   const [scoreData, setScoreData] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const loadAnalytics = async () => {
     try {
       setLoading(true);
+      setError(null);
       const [scoreRes, analyticsRes] = await Promise.all([
         api.getMonthlyScore(getCurrentMonth()),
         api.getAnalyticsOverview()
@@ -45,6 +47,7 @@ export function AnalyticsPage() {
       setAnalyticsData(analyticsRes);
     } catch (err) {
       console.error('Failed to load analytics:', err);
+      setError(err.message || 'Failed to load performance telemetry');
     } finally {
       setLoading(false);
     }
@@ -52,13 +55,27 @@ export function AnalyticsPage() {
 
   useEffect(() => { loadAnalytics(); }, []);
 
-  if (loading || !scoreData) {
+  if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[400px] font-mono text-xs text-[#7a7568]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-5 h-5 border-2 border-[#d9a441] border-t-transparent rounded-full animate-spin"></div>
           <p>Loading analytics telemetry...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error || !scoreData) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[400px] font-mono text-xs space-y-4">
+        <p className="text-[#e06c58]">{error || 'Unable to retrieve telemetry payload.'}</p>
+        <button
+          onClick={loadAnalytics}
+          className="px-3 py-1.5 rounded bg-[#1b1f23] hover:bg-[#262822] text-[#d9a441] border border-[#2b2e2b] transition-colors"
+        >
+          Retry Telemetry
+        </button>
       </div>
     );
   }
