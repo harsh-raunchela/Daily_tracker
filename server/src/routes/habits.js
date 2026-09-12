@@ -2,56 +2,58 @@ import express from 'express';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { getTodayDate, getCurrentMonth } from '../utils/date.js';
+import { getTodayDate, getCurrentMonth, shiftDateStr } from '../utils/date.js';
 
 const router = express.Router();
 
-// Helper: calculate streaks from sorted date array
-function calculateStreaksFromDates(dates) {
-  if (dates.length === 0) return { currentStreak: 0, longestStreak: 0, totalCompleted: 0 };
+// Helper: calculate streaks from sorted date array (timezone-safe)
+export function calculateStreaksFromDates(dates, referenceDate = null) {
+  if (!dates || dates.length === 0) return { currentStreak: 0, longestStreak: 0, totalCompleted: 0 };
   const sortedDates = [...new Set(dates)].sort();
   const totalCompleted = sortedDates.length;
+  const dateSet = new Set(sortedDates);
 
+  // 1. Longest historical streak
   let longestStreak = 0, tempStreak = 0;
   for (let i = 0; i < sortedDates.length; i++) {
     if (i === 0) {
       tempStreak = 1;
     } else {
-      const prev = new Date(sortedDates[i - 1]);
-      const curr = new Date(sortedDates[i]);
-      const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
-      if (diffDays === 1) {
+      const prev = sortedDates[i - 1];
+      const curr = sortedDates[i];
+      if (shiftDateStr(prev, 1) === curr) {
         tempStreak += 1;
-      } else if (diffDays > 1) {
+      } else if (prev !== curr) {
         tempStreak = 1;
       }
     }
     if (tempStreak > longestStreak) longestStreak = tempStreak;
   }
 
-  const todayStr = getTodayDate();
-  const dateSet = new Set(sortedDates);
-  let checkDate = new Date(todayStr);
-  const fmt = (d) => d.toISOString().split('T')[0];
+  // 2. Current active streak
+  const todayStr = referenceDate || getTodayDate();
+  const yesterdayStr = shiftDateStr(todayStr, -1);
   let streakCount = 0;
 
-  if (dateSet.has(fmt(checkDate))) {
-    streakCount++;
-    checkDate.setDate(checkDate.getDate() - 1);
-  } else {
-    const yesterday = new Date(checkDate);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (dateSet.has(fmt(yesterday))) {
-      checkDate = yesterday;
+  let checkDate = null;
+  if (dateSet.has(todayStr)) {
+    checkDate = todayStr;
+  } else if (dateSet.has(yesterdayStr)) {
+    checkDate = yesterdayStr;
+  }
+
+  if (checkDate) {
+    while (dateSet.has(checkDate)) {
+      streakCount++;
+      checkDate = shiftDateStr(checkDate, -1);
     }
   }
 
-  while (dateSet.has(fmt(checkDate))) {
-    streakCount++;
-    checkDate.setDate(checkDate.getDate() - 1);
-  }
-
-  return { currentStreak: streakCount, longestStreak, totalCompleted };
+  return {
+    currentStreak: streakCount,
+    longestStreak: Math.max(longestStreak, streakCount),
+    totalCompleted
+  };
 }
 
 // GET all habits for today

@@ -10,11 +10,12 @@ import {
   X
 } from 'lucide-react';
 import { api } from '../api';
-import { getTodayDate, getCurrentMonth } from '../utils/date';
+import { getTodayDate, getCurrentMonth, formatDisplayDate, addDaysToDate } from '../utils/date';
 
 export function HabitsPage() {
   const [habits, setHabits] = useState([]);
   const [calendarData, setCalendarData] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export function HabitsPage() {
     try {
       setLoading(true);
       const [habitsRes, calRes] = await Promise.all([
-        api.getHabits(getTodayDate()),
+        api.getHabits(selectedDate),
         api.getHabitCalendar(selectedMonth)
       ]);
       setHabits(habitsRes);
@@ -53,11 +54,11 @@ export function HabitsPage() {
 
   useEffect(() => {
     loadData();
-  }, [selectedMonth]);
+  }, [selectedDate, selectedMonth]);
 
   const handleToggleDaily = async (habitId) => {
     try {
-      await api.toggleHabitCompletion(habitId, { date: getTodayDate() });
+      await api.toggleHabitCompletion(habitId, { date: selectedDate });
       await loadData();
     } catch (err) {
       console.error('Toggle habit error:', err);
@@ -151,6 +152,7 @@ export function HabitsPage() {
   ];
   const [currYear, currMonthIdx] = selectedMonth.split('-').map(Number);
   const formattedMonthTitle = `${monthNames[currMonthIdx - 1]} ${currYear}`;
+  const completedCount = habits.filter(h => h.todayCompleted).length;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans">
@@ -162,7 +164,7 @@ export function HabitsPage() {
             02 · Habit Consistency Matrix
           </h2>
           <p className="text-xs text-[#7a7568]">
-            Preserving daily execution history across months and years.
+            Daily execution tracking with automatic streak preservation across days and months.
           </p>
         </div>
 
@@ -176,7 +178,7 @@ export function HabitsPage() {
                   : 'text-[#7a7568] hover:text-[#cfc8ba]'
               }`}
             >
-              List View
+              Daily Tracker
             </button>
             <button
               onClick={() => setViewMode('calendar')}
@@ -200,30 +202,87 @@ export function HabitsPage() {
         </div>
       </div>
 
-      {/* Month Navigator */}
-      <div className="consider-card p-4 flex items-center justify-between font-mono text-xs">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => changeMonth(-1)}
-            className="p-1 rounded border border-[#2b2e2b] hover:border-[#7a7568] text-[#cfc8ba]"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="font-bold text-[#cfc8ba] uppercase tracking-wider">
-            {formattedMonthTitle}
-          </span>
-          <button
-            onClick={() => changeMonth(1)}
-            className="p-1 rounded border border-[#2b2e2b] hover:border-[#7a7568] text-[#cfc8ba]"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+      {/* Daily View Controls (when in Daily Tracker mode) */}
+      {viewMode === 'list' && (
+        <div className="consider-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedDate(addDaysToDate(selectedDate, -1))}
+              className="p-1.5 rounded border border-[#2b2e2b] hover:border-[#7a7568] text-[#cfc8ba] transition-colors"
+              title="Previous Day"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
 
-        <div className="text-[#7a7568]">
-          CONFIGURED HABITS: <strong className="text-[#cfc8ba]">{habits.length}</strong>
+            <div className="flex items-center gap-2 px-1">
+              <span className="font-bold text-[#cfc8ba] uppercase tracking-wider">
+                {formatDisplayDate(selectedDate)}
+              </span>
+              {selectedDate === getTodayDate() && (
+                <span className="px-1.5 py-0.5 rounded bg-[#8fb896]/10 text-[#8fb896] border border-[#8fb896]/30 text-[10px] font-bold">
+                  TODAY
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={() => setSelectedDate(addDaysToDate(selectedDate, 1))}
+              className="p-1.5 rounded border border-[#2b2e2b] hover:border-[#7a7568] text-[#cfc8ba] transition-colors"
+              title="Next Day"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {selectedDate !== getTodayDate() && (
+              <button
+                onClick={() => setSelectedDate(getTodayDate())}
+                className="px-2 py-1 rounded bg-[#1b1f23] hover:bg-[#262822] text-[#d9a441] border border-[#2b2e2b] text-[10px] transition-colors ml-1"
+              >
+                Today
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4 text-[#7a7568]">
+            <div>
+              DAY PROGRESS: <strong className="text-[#8fb896]">{completedCount}</strong> / <span className="text-[#cfc8ba]">{habits.length}</span>
+            </div>
+            <div className="w-24 bg-[#1b1f23] h-1.5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#8fb896] rounded-full transition-all"
+                style={{ width: `${habits.length > 0 ? (completedCount / habits.length) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Month Navigator (when in Monthly Matrix mode) */}
+      {viewMode === 'calendar' && (
+        <div className="consider-card p-4 flex items-center justify-between font-mono text-xs">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => changeMonth(-1)}
+              className="p-1 rounded border border-[#2b2e2b] hover:border-[#7a7568] text-[#cfc8ba]"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="font-bold text-[#cfc8ba] uppercase tracking-wider">
+              {formattedMonthTitle}
+            </span>
+            <button
+              onClick={() => changeMonth(1)}
+              className="p-1 rounded border border-[#2b2e2b] hover:border-[#7a7568] text-[#cfc8ba]"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="text-[#7a7568]">
+            CONFIGURED HABITS: <strong className="text-[#cfc8ba]">{habits.length}</strong>
+          </div>
+        </div>
+      )}
 
       {/* View Mode: List */}
       {viewMode === 'list' && (
