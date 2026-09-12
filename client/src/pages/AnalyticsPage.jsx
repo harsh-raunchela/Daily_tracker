@@ -15,6 +15,7 @@ import {
   ArrowDownRight
 } from 'lucide-react';
 import { api } from '../api';
+import { getCurrentMonth, formatMonthTitle } from '../utils/date';
 
 const chartTooltipStyle = {
   contentStyle: {
@@ -37,8 +38,8 @@ export function AnalyticsPage() {
     try {
       setLoading(true);
       const [scoreRes, analyticsRes] = await Promise.all([
-        api.getMonthlyScore('2026-08'),
-        api.getAnalytics()
+        api.getMonthlyScore(getCurrentMonth()),
+        api.getAnalyticsOverview()
       ]);
       setScoreData(scoreRes);
       setAnalyticsData(analyticsRes);
@@ -51,32 +52,55 @@ export function AnalyticsPage() {
 
   useEffect(() => { loadAnalytics(); }, []);
 
-  if (loading || !scoreData || !analyticsData) {
+  if (loading && !scoreData) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="font-mono text-xs text-[#7a7568] animate-pulse">
-          Loading telemetry…
-        </div>
+      <div className="p-8 flex items-center justify-center min-h-[400px] font-mono text-xs text-[#7a7568]">
+        Loading analytics telemetry...
       </div>
     );
   }
 
-  const { breakdown } = scoreData;
-
   const scoreBreakdown = [
-    { label: 'CONSISTENCY', pct: '50%', pts: breakdown.consistency.weighted, max: 50, raw: `${breakdown.consistency.rawPercentage}% executed` },
-    { label: 'DIFFICULTY',  pct: '20%', pts: breakdown.difficulty.weighted,  max: 20, raw: `Avg ${breakdown.difficulty.avgDifficulty}/5` },
-    { label: 'STREAKS',     pct: '15%', pts: breakdown.streak.weighted,      max: 15, raw: `Max ${breakdown.streak.maxStreak}d` },
-    { label: 'IMPROVEMENT', pct: '15%', pts: breakdown.improvement.weighted, max: 15, raw: `+${breakdown.improvement.diffPercentage}% vs July`, accent: true },
+    {
+      label: 'Consistency',
+      pct: '50%',
+      pts: scoreData.breakdown.consistency.points,
+      max: 50,
+      raw: `${scoreData.breakdown.consistency.rate}% habit completion`
+    },
+    {
+      label: 'Difficulty',
+      pct: '20%',
+      pts: scoreData.breakdown.difficulty.points,
+      max: 20,
+      raw: `${scoreData.breakdown.difficulty.rate}% difficulty load`
+    },
+    {
+      label: 'Streaks',
+      pct: '15%',
+      pts: scoreData.breakdown.streak.points,
+      max: 15,
+      raw: `${scoreData.breakdown.streak.maxStreak} day max streak`
+    },
+    {
+      label: 'Improvement',
+      pct: '15%',
+      pts: scoreData.breakdown.improvement.points,
+      max: 15,
+      raw: `${scoreData.breakdown.improvement.delta >= 0 ? '+' : ''}${scoreData.breakdown.improvement.delta}% vs prev month`,
+      accent: scoreData.breakdown.improvement.delta > 0
+    },
   ];
 
   const levelColor = {
-    'Elite': '#d9a441',
-    'Excellent': '#8fb896',
-    'Good': '#cfc8ba',
-    'Getting Started': '#7a7568',
-    'Needs Work': '#e06c58',
+    'Unstoppable': '#8fb896',
+    'High Performer': '#d9a441',
+    'Consistent': '#cfc8ba',
+    'Building Momentum': '#b5afa2',
+    'Getting Started': '#7a7568'
   }[scoreData.level] || '#cfc8ba';
+
+  const currentMonthLabel = formatMonthTitle(scoreData?.month || getCurrentMonth());
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans">
@@ -98,7 +122,7 @@ export function AnalyticsPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-3 font-mono">
               <span className="text-[10px] uppercase tracking-wider text-[#7a7568]">
-                August 2026 · Monthly Score
+                {currentMonthLabel} · Monthly Score
               </span>
               <span
                 className="text-[10px] font-bold uppercase px-2 py-0.5 rounded border"
@@ -137,19 +161,10 @@ export function AnalyticsPage() {
                 <p className={`text-[10px] ${item.accent ? 'text-[#8fb896]' : 'text-[#7a7568]'}`}>
                   {item.raw}
                 </p>
-                {/* micro bar */}
-                <div className="h-0.5 bg-[#1b1f23] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(item.pts / item.max) * 100}%`,
-                      backgroundColor: item.accent ? '#8fb896' : '#d9a441'
-                    }}
-                  />
-                </div>
               </div>
             ))}
           </div>
+
         </div>
       </div>
 
@@ -163,13 +178,13 @@ export function AnalyticsPage() {
               Daily Completion Trend
             </h3>
             <p className="text-[10px] text-[#7a7568] font-mono mt-0.5">
-              % of active habits completed · August
+              % of active habits completed · {currentMonthLabel}
             </p>
           </div>
 
           <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={analyticsData.dailyTrend}>
+              <LineChart data={analyticsData?.dailyTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#262822" opacity={0.6} />
                 <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#7a7568', fontFamily: 'monospace' }} stroke="#262822" />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#7a7568', fontFamily: 'monospace' }} stroke="#262822" />
@@ -201,7 +216,7 @@ export function AnalyticsPage() {
 
           <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analyticsData.weekdayPerformance}>
+              <BarChart data={analyticsData?.weekdayPerformance}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#262822" opacity={0.6} />
                 <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#7a7568', fontFamily: 'monospace' }} stroke="#262822" />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#7a7568', fontFamily: 'monospace' }} stroke="#262822" />
@@ -226,7 +241,7 @@ export function AnalyticsPage() {
             Month-over-Month Comparison
           </h3>
           <p className="text-[10px] text-[#7a7568] font-mono mt-0.5">
-            July 2026 vs August 2026 habit consistency
+            Previous month vs {currentMonthLabel} habit consistency
           </p>
         </div>
 
@@ -237,8 +252,8 @@ export function AnalyticsPage() {
                 <th className="pb-3 pr-4">Habit</th>
                 <th className="pb-3 pr-4">Category</th>
                 <th className="pb-3 pr-4">Diff</th>
-                <th className="pb-3 pr-4">July</th>
-                <th className="pb-3 pr-4">August</th>
+                <th className="pb-3 pr-4">Prev Month</th>
+                <th className="pb-3 pr-4">This Month</th>
                 <th className="pb-3 text-right">Trend</th>
               </tr>
             </thead>
@@ -259,8 +274,8 @@ export function AnalyticsPage() {
                       {item.difficulty}/5
                     </span>
                   </td>
-                  <td className="py-2.5 pr-4 text-[#b5afa2]">{item.julyRate}%</td>
-                  <td className="py-2.5 pr-4 text-[#cfc8ba] font-bold">{item.augRate}%</td>
+                  <td className="py-2.5 pr-4 text-[#b5afa2]">{item.prevRate ?? item.julyRate}%</td>
+                  <td className="py-2.5 pr-4 text-[#cfc8ba] font-bold">{item.currRate ?? item.augRate}%</td>
                   <td className="py-2.5 text-right">
                     <span className={`inline-flex items-center gap-0.5 font-bold ${
                       item.diff >= 0 ? 'text-[#8fb896]' : 'text-[#e06c58]'

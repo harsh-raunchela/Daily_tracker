@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getTodayDate, getCurrentMonth } from '../utils/date.js';
 
 const router = express.Router();
 
@@ -39,7 +40,7 @@ router.get('/', authenticateToken, (req, res) => {
 // GET calendar dates with journal entries (for month indicator dots)
 router.get('/calendar', authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const month = req.query.month || '2026-08';
+  const month = req.query.month || getCurrentMonth();
 
   const entries = db.find('journalEntries', j => j.userId === userId && j.date.startsWith(month));
   const summary = entries.map(e => ({
@@ -70,7 +71,7 @@ router.post('/', authenticateToken, (req, res) => {
   const userId = req.user.id;
   const { date, title, body, mood, energy, tags, highlights, challenges } = req.body;
 
-  const targetDate = date || '2026-08-26';
+  const targetDate = date || getTodayDate();
 
   const existing = db.findOne('journalEntries', j => j.userId === userId && j.date === targetDate);
 

@@ -3,13 +3,14 @@ import crypto from 'crypto';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { calculateMonthlyScore } from './scoring.js';
+import { getCurrentMonth } from '../utils/date.js';
 
 const router = express.Router();
 
 // GET all rewards with auto-evaluated unlock status based on monthly score
 router.get('/', authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const month = req.query.month || '2026-08';
+  const month = req.query.month || getCurrentMonth();
 
   const monthlyScoreData = calculateMonthlyScore(userId, month);
   const currentScore = monthlyScoreData.score;
@@ -55,7 +56,7 @@ router.post('/', authenticateToken, (req, res) => {
   }
 
   const scoreTarget = Number(requiredScore) || 80;
-  const currentMonth = month || '2026-08';
+  const currentMonth = month || getCurrentMonth();
   const monthlyScoreData = calculateMonthlyScore(userId, currentMonth);
   const unlocked = monthlyScoreData.score >= scoreTarget;
 

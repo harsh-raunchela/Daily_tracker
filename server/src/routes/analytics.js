@@ -5,31 +5,44 @@ import { calculateMonthlyScore } from './scoring.js';
 
 const router = express.Router();
 
+const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
+
 router.get('/overview', authenticateToken, (req, res) => {
   const userId = req.user.id;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const monthStr = month.toString().padStart(2, '0');
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const prevMonthStr = prevMonth.toString().padStart(2, '0');
+
+  const daysInCurrentMonth = now.getDate();
+  const daysInPrevMonth = getDaysInMonth(prevYear, prevMonth);
+
   const habits = db.find('habits', h => h.userId === userId && h.active !== false);
   const records = db.find('habitRecords', r => r.userId === userId);
 
-  // 1. Daily trend for August 2026 (Days 1 to 26)
+  // 1. Daily trend for current month
   const dailyTrend = [];
-  for (let d = 1; d <= 26; d++) {
-    const dayStr = d < 10 ? `0${d}` : `${d}`;
-    const dateKey = `2026-08-${dayStr}`;
+  for (let d = 1; d <= daysInCurrentMonth; d++) {
+    const dayStr = d.toString().padStart(2, '0');
+    const dateKey = `${year}-${monthStr}-${dayStr}`;
     const dayRecords = records.filter(r => r.date === dateKey && r.completed);
     const rate = habits.length > 0 ? Math.round((dayRecords.length / habits.length) * 100) : 0;
     dailyTrend.push({
-      date: `Aug ${d}`,
+      date: `Day ${d}`,
       fullDate: dateKey,
       completionRate: rate,
       completedCount: dayRecords.length
     });
   }
 
-  // 2. Weekday Performance (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+  // 2. Weekday Performance
   const weekdayTotals = { Mon: { total: 0, completed: 0 }, Tue: { total: 0, completed: 0 }, Wed: { total: 0, completed: 0 }, Thu: { total: 0, completed: 0 }, Fri: { total: 0, completed: 0 }, Sat: { total: 0, completed: 0 }, Sun: { total: 0, completed: 0 } };
   const weekdayKeys = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  records.filter(r => r.date.startsWith('2026-08')).forEach(r => {
+  records.filter(r => r.date.startsWith(`${year}-${monthStr}`)).forEach(r => {
     const d = new Date(r.date);
     const dayName = weekdayKeys[d.getDay()];
     if (weekdayTotals[dayName]) {
@@ -43,39 +56,39 @@ router.get('/overview', authenticateToken, (req, res) => {
     rate: weekdayTotals[k].total > 0 ? Math.round((weekdayTotals[k].completed / weekdayTotals[k].total) * 100) : 0
   }));
 
-  // 3. Habit-by-habit July vs August comparison
+  // 3. Habit-by-habit previous vs current month comparison
   const habitComparison = habits.map(h => {
-    const julyRecords = records.filter(r => r.habitId === h.id && r.date.startsWith('2026-07') && r.completed);
-    const augRecords = records.filter(r => r.habitId === h.id && r.date.startsWith('2026-08') && r.completed);
+    const prevRecords = records.filter(r => r.habitId === h.id && r.date.startsWith(`${prevYear}-${prevMonthStr}`) && r.completed);
+    const currRecords = records.filter(r => r.habitId === h.id && r.date.startsWith(`${year}-${monthStr}`) && r.completed);
     
-    const julyRate = Math.round((julyRecords.length / 31) * 100);
-    const augRate = Math.round((augRecords.length / 26) * 100);
-    const trend = augRate >= julyRate ? 'up' : 'down';
-    const diff = augRate - julyRate;
+    const prevRate = Math.round((prevRecords.length / daysInPrevMonth) * 100);
+    const currRate = Math.round((currRecords.length / daysInCurrentMonth) * 100);
+    const trend = currRate >= prevRate ? 'up' : 'down';
+    const diff = currRate - prevRate;
 
     return {
       habitId: h.id,
       name: h.name,
       category: h.category,
       difficulty: h.difficulty,
-      julyRate,
-      augRate,
+      prevRate,
+      currRate,
       diff,
       trend
     };
   });
 
-  // 4. Mood & Energy Correlation with Productivity from Journal
-  const journals = db.find('journalEntries', j => j.userId === userId && j.date.startsWith('2026-08'));
+  // 4. Mood & Energy Correlation
+  const journals = db.find('journalEntries', j => j.userId === userId && j.date.startsWith(`${year}-${monthStr}`));
   const moodEnergyTrend = journals.map(j => ({
     date: j.date.substring(5),
     mood: j.mood,
     energy: j.energy
   })).sort((a, b) => a.date.localeCompare(b.date));
 
-  // 5. Monthly Scores Overview
-  const augustScore = calculateMonthlyScore(userId, '2026-08');
-  const julyScore = calculateMonthlyScore(userId, '2026-07');
+  // 5. Monthly Scores
+  const currentScore = calculateMonthlyScore(userId, `${year}-${monthStr}`);
+  const previousScore = calculateMonthlyScore(userId, `${prevYear}-${prevMonthStr}`);
 
   res.json({
     dailyTrend,
@@ -83,8 +96,8 @@ router.get('/overview', authenticateToken, (req, res) => {
     habitComparison,
     moodEnergyTrend,
     monthlyScores: [
-      { month: 'July 2026', ...julyScore },
-      { month: 'August 2026', ...augustScore }
+      { month: `${prevMonth}/${prevYear}`, ...previousScore },
+      { month: `${month}/${year}`, ...currentScore }
     ]
   });
 });

@@ -2,12 +2,13 @@ import express from 'express';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { calculateMonthlyScore } from './scoring.js';
+import { getTodayDate } from '../utils/date.js';
 
 const router = express.Router();
 
 router.get('/', authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const todayStr = req.query.date || '2026-08-26';
+  const todayStr = req.query.date || getTodayDate();
   const monthStr = todayStr.substring(0, 7);
 
   // 1. Habits for today

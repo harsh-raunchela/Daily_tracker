@@ -10,6 +10,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { api } from '../api';
+import { getCurrentMonth, formatMonthTitle } from '../utils/date';
 
 export function RewardsPage() {
   const [rewards, setRewards] = useState([]);
@@ -23,7 +24,7 @@ export function RewardsPage() {
   const loadRewards = async () => {
     try {
       setLoading(true);
-      const data = await api.getRewards('2026-08');
+      const data = await api.getRewards(getCurrentMonth());
       setRewards(data.rewards || []);
       setCurrentScore(data.currentScore || 0);
     } catch (err) {
@@ -43,7 +44,7 @@ export function RewardsPage() {
         title,
         description,
         requiredScore: Number(requiredScore),
-        month: '2026-08'
+        month: getCurrentMonth()
       });
       setTitle('');
       setDescription('');
@@ -108,7 +109,7 @@ export function RewardsPage() {
       {/* Score progress bar */}
       <div className="consider-card p-4 font-mono">
         <div className="flex items-center justify-between text-xs mb-2">
-          <span className="text-[#7a7568] uppercase tracking-wider">August Score Progress</span>
+          <span className="text-[#7a7568] uppercase tracking-wider">{formatMonthTitle(getCurrentMonth())} Score Progress</span>
           <span className="text-[#d9a441] font-bold">{currentScore} / 100</span>
         </div>
         <div className="h-1.5 bg-[#1b1f23] rounded-full overflow-hidden">

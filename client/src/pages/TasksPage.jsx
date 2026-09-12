@@ -9,6 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { api } from '../api';
+import { getTodayDate } from '../utils/date';
 
 const PRIORITY_STYLES = {
   high:   { label: 'HIGH',   bg: 'bg-[#3a1a1a]', text: 'text-[#e06c58]', border: 'border-[#5a2020]' },
@@ -25,7 +26,7 @@ export function TasksPage() {
   const [quickTitle, setQuickTitle] = useState('');
   const [quickPriority, setQuickPriority] = useState('medium');
   const [quickCategory, setQuickCategory] = useState('Work');
-  const [quickDueDate, setQuickDueDate] = useState('2026-08-26');
+  const [quickDueDate, setQuickDueDate] = useState(() => getTodayDate());
 
   const loadTasks = async () => {
     try {
@@ -33,7 +34,7 @@ export function TasksPage() {
       const data = await api.getTasks({
         filter: activeFilter,
         search: searchQuery,
-        date: '2026-08-26'
+        date: getTodayDate()
       });
       setTasks(data);
     } catch (err) {
@@ -53,10 +54,11 @@ export function TasksPage() {
         title: quickTitle,
         priority: quickPriority,
         category: quickCategory,
-        dueDate: quickDueDate,
+        dueDate: quickDueDate || getTodayDate(),
         recurring: 'none'
       });
       setQuickTitle('');
+      setQuickDueDate(getTodayDate());
       await loadTasks();
     } catch (err) {
       console.error('Create task error:', err);
@@ -82,18 +84,18 @@ export function TasksPage() {
   };
 
   const filterTabs = [
-    { id: 'all', label: 'All' },
-    { id: 'today', label: 'Today' },
+    { id: 'all', label: 'All Active' },
+    { id: 'today', label: 'Due Today' },
     { id: 'upcoming', label: 'Upcoming' },
     { id: 'overdue', label: 'Overdue' },
-    { id: 'completed', label: 'Done' },
+    { id: 'completed', label: 'Completed' },
   ];
 
   const completedCount = tasks.filter(t => t.completed).length;
   const pendingCount = tasks.filter(t => !t.completed).length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 font-sans">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -113,16 +115,18 @@ export function TasksPage() {
         </div>
       </div>
 
-      {/* Quick Add */}
+      {/* Quick Add Bar */}
       <div className="consider-card p-4">
-        <form onSubmit={handleQuickAdd} className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            placeholder="+ Quick-add task…"
-            value={quickTitle}
-            onChange={(e) => setQuickTitle(e.target.value)}
-            className="flex-1 px-3 py-2 rounded bg-[#0e1113] border border-[#262822] text-[#cfc8ba] text-xs placeholder-[#4a4d46] focus:outline-none focus:border-[#d9a441] font-mono"
-          />
+        <form onSubmit={handleQuickAdd} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="+ Quick-add task..."
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              className="w-full px-3 py-2 rounded bg-[#0e1113] border border-[#262822] text-xs text-[#cfc8ba] font-mono focus:outline-none focus:border-[#d9a441]"
+            />
+          </div>
 
           <div className="flex items-center gap-2">
             <select
@@ -146,12 +150,24 @@ export function TasksPage() {
               <option value="Study">Study</option>
             </select>
 
-            <input
-              type="date"
-              value={quickDueDate}
-              onChange={(e) => setQuickDueDate(e.target.value)}
-              className="px-2 py-2 rounded bg-[#0e1113] border border-[#262822] text-[#cfc8ba] text-xs font-mono focus:outline-none"
-            />
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={quickDueDate}
+                onChange={(e) => setQuickDueDate(e.target.value)}
+                className="px-2 py-2 rounded bg-[#0e1113] border border-[#262822] text-[#cfc8ba] text-xs font-mono focus:outline-none"
+              />
+              {quickDueDate !== getTodayDate() && (
+                <button
+                  type="button"
+                  onClick={() => setQuickDueDate(getTodayDate())}
+                  className="px-2 py-2 rounded bg-[#1b1f23] hover:bg-[#262822] text-[10px] text-[#d9a441] border border-[#2b2e2b] font-mono whitespace-nowrap"
+                  title="Reset to today"
+                >
+                  Today
+                </button>
+              )}
+            </div>
 
             <button
               type="submit"
@@ -198,7 +214,7 @@ export function TasksPage() {
       <div className="space-y-2">
         {tasks && tasks.length > 0 ? (
           tasks.map((task) => {
-            const isOverdue = !task.completed && task.dueDate < '2026-08-26';
+            const isOverdue = !task.completed && task.dueDate < getTodayDate();
             const ps = PRIORITY_STYLES[task.priority] || PRIORITY_STYLES.low;
 
             return (
@@ -245,7 +261,7 @@ export function TasksPage() {
                     isOverdue ? 'text-[#e06c58]' : 'text-[#7a7568]'
                   }`}>
                     <Calendar className="w-3 h-3" />
-                    {task.dueDate === '2026-08-26' ? 'Today' : task.dueDate}
+                    {task.dueDate === getTodayDate() ? 'Today' : task.dueDate}
                   </span>
 
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${ps.bg} ${ps.text} ${ps.border}`}>

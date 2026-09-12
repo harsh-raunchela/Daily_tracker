@@ -9,6 +9,7 @@ import {
   Gift
 } from 'lucide-react';
 import { api } from '../api';
+import { getTodayDate, formatDisplayDate } from '../utils/date';
 
 export function DashboardPage({ setCurrentTab }) {
   const [data, setData] = useState(null);
@@ -18,7 +19,7 @@ export function DashboardPage({ setCurrentTab }) {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const res = await api.getDashboard('2026-08-26');
+      const res = await api.getDashboard(getTodayDate());
       setData(res);
     } catch (err) {
       setError(err.message || 'Failed to load dashboard');
@@ -33,7 +34,7 @@ export function DashboardPage({ setCurrentTab }) {
 
   const handleToggleHabit = async (habitId) => {
     try {
-      await api.toggleHabitCompletion(habitId, { date: '2026-08-26' });
+      await api.toggleHabitCompletion(habitId, { date: getTodayDate() });
       await loadDashboard();
     } catch (err) {
       console.error('Error toggling habit:', err);
@@ -70,7 +71,7 @@ export function DashboardPage({ setCurrentTab }) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs uppercase tracking-widest text-[#d9a441]">
-                August 2026 Score
+                {data?.month ? `${new Date(data.month + '-01').toLocaleString('default', { month: 'long' })} ${new Date(data.month + '-01').getFullYear()} Score` : 'Monthly Score'}
               </span>
               <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[#8fb896] text-[#8fb896]">
                 {summary.monthlyLevel}
@@ -95,7 +96,7 @@ export function DashboardPage({ setCurrentTab }) {
               <span>Score breakdown</span>
               <ArrowRight className="w-3 h-3" />
             </button>
-            <span className="text-[#8fb896]">+14% vs July</span>
+            <span className="text-[#8fb896]">Active momentum</span>
           </div>
         </div>
 

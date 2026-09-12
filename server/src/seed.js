@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { db } from './db.js';
+import { getTodayDate, getCurrentMonth, getPrevMonth, getDaysInMonth } from './utils/date.js';
 
 export function seedUserData(userId) {
   // Check if habits exist for user
@@ -8,6 +9,12 @@ export function seedUserData(userId) {
   if (existingHabits.length > 0) {
     return;
   }
+
+  const todayStr = getTodayDate();
+  const currentMonth = getCurrentMonth();
+  const prevMonth = getPrevMonth(currentMonth);
+  const daysInPrev = getDaysInMonth(prevMonth);
+  const [curY, curM, curD] = todayStr.split('-').map(Number);
 
   // Pre-seed 4 habits
   const habits = [
@@ -22,7 +29,7 @@ export function seedUserData(userId) {
       frequency: 'daily',
       active: true,
       color: '#4F46E5',
-      createdAt: '2026-08-01T08:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
@@ -35,7 +42,7 @@ export function seedUserData(userId) {
       frequency: 'daily',
       active: true,
       color: '#16A34A',
-      createdAt: '2026-08-01T08:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
@@ -48,7 +55,7 @@ export function seedUserData(userId) {
       frequency: 'daily',
       active: true,
       color: '#0EA5E9',
-      createdAt: '2026-08-01T08:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
@@ -61,22 +68,17 @@ export function seedUserData(userId) {
       frequency: 'daily',
       active: true,
       color: '#F59E0B',
-      createdAt: '2026-08-01T08:00:00Z'
+      createdAt: new Date().toISOString()
     }
   ];
 
   habits.forEach(h => db.insert('habits', h));
 
-  // Seed historical habit records for August 2026 up to today (Aug 26)
-  // And also some July 2026 records for month-to-month improvement calculations!
-  const today = new Date('2026-08-26');
-  
-  // July records (Days 1 to 31) - roughly 70% completion
-  for (let day = 1; day <= 31; day++) {
-    const dayStr = day < 10 ? `0${day}` : `${day}`;
-    const dateStr = `2026-07-${dayStr}`;
+  // Previous month records - roughly 70% completion
+  for (let day = 1; day <= daysInPrev; day++) {
+    const dayStr = String(day).padStart(2, '0');
+    const dateStr = `${prevMonth}-${dayStr}`;
     habits.forEach((habit, hIdx) => {
-      // simulate realistic pattern
       const completed = (day + hIdx) % 4 !== 0;
       db.insert('habitRecords', {
         id: crypto.randomUUID(),
@@ -91,18 +93,16 @@ export function seedUserData(userId) {
     });
   }
 
-  // August records (Days 1 to 26) - higher consistency (~85%)
-  for (let day = 1; day <= 26; day++) {
-    const dayStr = day < 10 ? `0${day}` : `${day}`;
-    const dateStr = `2026-08-${dayStr}`;
+  // Current month records up to today
+  for (let day = 1; day <= curD; day++) {
+    const dayStr = String(day).padStart(2, '0');
+    const dateStr = `${currentMonth}-${dayStr}`;
     habits.forEach((habit, hIdx) => {
       let completed = true;
       if (day === 7 || day === 14 || day === 21) {
-        // slight rest days
-        if (hIdx === 1) completed = false; // missed workout
+        if (hIdx === 1) completed = false;
       }
-      if (day === 26) {
-        // today - complete reading & meditation, leave workout & coding ready to be checked off in demo!
+      if (day === curD) {
         completed = hIdx === 0 || hIdx === 3;
       }
       db.insert('habitRecords', {
@@ -119,58 +119,70 @@ export function seedUserData(userId) {
   }
 
   // Seed sample tasks
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+  const dayAfter = new Date();
+  dayAfter.setDate(dayAfter.getDate() + 2);
+  const dayAfterStr = `${dayAfter.getFullYear()}-${String(dayAfter.getMonth() + 1).padStart(2, '0')}-${String(dayAfter.getDate()).padStart(2, '0')}`;
+
   const tasks = [
     {
       id: crypto.randomUUID(),
       userId,
       title: 'Review System Architecture document',
       description: 'Go over core modules and data flow in detail.',
-      dueDate: '2026-08-26',
+      dueDate: todayStr,
       priority: 'high',
       category: 'Work',
       completed: true,
-      completedAt: '2026-08-26T14:30:00Z',
+      completedAt: new Date().toISOString(),
       recurring: 'none',
-      createdAt: '2026-08-26T09:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
       userId,
       title: 'Prepare Weekly Sprint Planning',
       description: 'Align task priorities and habit targets for the coming sprint.',
-      dueDate: '2026-08-26',
+      dueDate: todayStr,
       priority: 'high',
       category: 'Work',
       completed: false,
       completedAt: null,
       recurring: 'weekly',
-      createdAt: '2026-08-26T10:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
       userId,
       title: 'Order new reading material on distributed systems',
       description: 'Select books recommended in community discussion.',
-      dueDate: '2026-08-27',
+      dueDate: tomorrowStr,
       priority: 'medium',
       category: 'Personal',
       completed: false,
       completedAt: null,
       recurring: 'none',
-      createdAt: '2026-08-26T11:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
       userId,
       title: 'Grocery shopping & meal prep for high energy',
       description: 'Stock up on vegetables, clean protein, and fruits.',
-      dueDate: '2026-08-28',
+      dueDate: dayAfterStr,
       priority: 'low',
       category: 'Health',
       completed: false,
       completedAt: null,
       recurring: 'weekly',
-      createdAt: '2026-08-26T12:00:00Z'
+      createdAt: new Date().toISOString()
     }
   ];
 
@@ -181,7 +193,7 @@ export function seedUserData(userId) {
     {
       id: crypto.randomUUID(),
       userId,
-      date: '2026-08-25',
+      date: yesterdayStr,
       title: 'Flow state in programming and steady momentum',
       body: 'Spent three solid hours building out the data pipeline today. Had minimal distractions in the morning. Getting the habit routines locked in is starting to feel second nature.',
       mood: 5,
@@ -189,13 +201,13 @@ export function seedUserData(userId) {
       tags: ['coding', 'flow', 'reflection'],
       highlights: ['Finished data engine', 'Kept 12-day streak alive'],
       challenges: ['Felt a bit tired after lunch, took a 15m walk'],
-      createdAt: '2026-08-25T21:30:00Z',
-      updatedAt: '2026-08-25T21:30:00Z'
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 86400000).toISOString()
     },
     {
       id: crypto.randomUUID(),
       userId,
-      date: '2026-08-26',
+      date: todayStr,
       title: 'Clarity and steady progress across all fronts',
       body: 'Focused on making daily actions frictionless. Completed morning reading and meditation early. Feeling energized to finish strong.',
       mood: 4,
@@ -203,8 +215,8 @@ export function seedUserData(userId) {
       tags: ['clarity', 'habits', 'growth'],
       highlights: ['Morning routine completed smoothly'],
       challenges: ['Need to prioritize evening wind-down'],
-      createdAt: '2026-08-26T18:00:00Z',
-      updatedAt: '2026-08-26T18:00:00Z'
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
   ];
 
@@ -218,11 +230,11 @@ export function seedUserData(userId) {
       title: 'Premium Noise-Cancelling Headphones',
       description: 'Treat myself to deep work focus gear when achieving elite monthly score.',
       requiredScore: 90,
-      month: '2026-08',
+      month: currentMonth,
       unlocked: false,
       claimed: false,
       claimedAt: null,
-      createdAt: '2026-08-01T00:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
@@ -230,11 +242,11 @@ export function seedUserData(userId) {
       title: 'Weekend Nature Getaway & Dinner',
       description: 'Unwind and celebrate maintaining over 80+ consistency score.',
       requiredScore: 80,
-      month: '2026-08',
+      month: currentMonth,
       unlocked: true,
       claimed: false,
       claimedAt: null,
-      createdAt: '2026-08-01T00:00:00Z'
+      createdAt: new Date().toISOString()
     },
     {
       id: crypto.randomUUID(),
@@ -242,11 +254,11 @@ export function seedUserData(userId) {
       title: 'New Hardcover Tech Book',
       description: 'Reward for hitting 70+ baseline monthly habit score.',
       requiredScore: 70,
-      month: '2026-08',
+      month: currentMonth,
       unlocked: true,
       claimed: true,
-      claimedAt: '2026-08-20T12:00:00Z',
-      createdAt: '2026-08-01T00:00:00Z'
+      claimedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     }
   ];
 

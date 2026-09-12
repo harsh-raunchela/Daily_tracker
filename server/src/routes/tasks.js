@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getTodayDate } from '../utils/date.js';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
 router.get('/', authenticateToken, (req, res) => {
   const userId = req.user.id;
   const { filter, category, search, date } = req.query;
-  const todayStr = date || '2026-08-26';
+  const todayStr = date || getTodayDate();
 
   let tasks = db.find('tasks', t => t.userId === userId);
 
@@ -59,7 +60,7 @@ router.post('/', authenticateToken, (req, res) => {
     userId,
     title,
     description: description || '',
-    dueDate: dueDate || '2026-08-26',
+    dueDate: dueDate || getTodayDate(),
     priority: priority || 'medium',
     category: category || 'Work',
     completed: false,

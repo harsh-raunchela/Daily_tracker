@@ -12,6 +12,7 @@ import {
   Plus
 } from 'lucide-react';
 import { api } from '../api';
+import { getTodayDate, formatDisplayDate, formatMonthTitle, getCurrentMonth } from '../utils/date';
 
 export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
   const [activeChapter, setActiveChapter] = useState('01 · inception');
@@ -66,7 +67,7 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
 
   const handleToggleHabit = async (habitId) => {
     try {
-      await api.toggleHabitCompletion(habitId, { date: '2026-08-26' });
+      await api.toggleHabitCompletion(habitId, { date: getTodayDate() });
       onRefresh();
     } catch (e) {
       console.error(e);
@@ -85,7 +86,7 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
   const handleSaveJournal = async () => {
     try {
       await api.saveJournalEntry({
-        date: '2026-08-26',
+        date: getTodayDate(),
         title: 'Daily Reflection',
         body: journalText,
         mood: journalMood,
@@ -186,7 +187,7 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
 
           <div className="pt-8 border-l border-[#33352f] pl-4 font-mono text-xs text-[#7a7568] space-y-1">
             <p>four core pillars · <b>habits · tasks · journal · transparent scoring</b></p>
-            <p>August 2026 telemetry · <b className="text-[#8fb896]">92/100 Elite Consistency</b></p>
+            <p>{formatMonthTitle(getCurrentMonth())} telemetry · <b className="text-[#8fb896]">92/100 Elite Consistency</b></p>
           </div>
         </div>
 
@@ -326,7 +327,7 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
                       {task.title}
                     </p>
                     <p className="text-[11px] text-[#7a7568] truncate max-w-xs">
-                      Due: {task.dueDate === '2026-08-26' ? 'Today' : task.dueDate} • {task.category}
+                      Due: {task.dueDate === getTodayDate() ? 'Today' : task.dueDate} • {task.category}
                     </p>
                   </div>
                 </div>
@@ -378,7 +379,7 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
           <div className="p-6 rounded border border-[#2b2e2b] bg-[#121518] space-y-4">
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs uppercase tracking-widest text-[#7a7568]">
-                Notebook · Aug 26, 2026
+                Notebook · {formatDisplayDate(getTodayDate())}
               </span>
               {savedJournal && (
                 <span className="font-mono text-xs text-[#8fb896] flex items-center gap-1">
@@ -577,7 +578,7 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
             <div className="r-row">
               <span>Date</span>
               <span className="dots"></span>
-              <span className="v">2026-08-26</span>
+              <span className="v">{getTodayDate()}</span>
             </div>
             <div className="r-row">
               <span>Active Habits</span>
@@ -600,9 +601,9 @@ export function StoryMode({ onOpenWorkspace, dashboardData, onRefresh }) {
               <span className="v">29 days 🔥</span>
             </div>
             <div className="r-row">
-              <span>August Consistency Rate</span>
+              <span>{formatMonthTitle(getCurrentMonth())} Consistency</span>
               <span className="dots"></span>
-              <span className="v">95% (vs July 75%)</span>
+              <span className="v">{dashboardData?.summary?.habitCompletionRate ?? 90}%</span>
             </div>
             <div className="r-row">
               <span>Daily Reflection</span>

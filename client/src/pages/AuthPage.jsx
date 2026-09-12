@@ -120,7 +120,7 @@ export function AuthPage() {
               <ArrowRight className="w-4 h-4 ml-1" />
             </button>
             <p className="font-mono text-[10px] text-center text-[#7a7568] mt-2">
-              Pre-loaded with sample habits, journal reflections, and August history.
+              Pre-loaded with sample habits, journal reflections, and real-time history.
             </p>
           </div>
 

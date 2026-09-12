@@ -10,11 +10,12 @@ import {
   X
 } from 'lucide-react';
 import { api } from '../api';
+import { getTodayDate, getCurrentMonth } from '../utils/date';
 
 export function HabitsPage() {
   const [habits, setHabits] = useState([]);
   const [calendarData, setCalendarData] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState('2026-08');
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
   const [loading, setLoading] = useState(true);
   const [selectedHabit, setSelectedHabit] = useState(null);
@@ -38,7 +39,7 @@ export function HabitsPage() {
     try {
       setLoading(true);
       const [habitsRes, calRes] = await Promise.all([
-        api.getHabits('2026-08-26'),
+        api.getHabits(getTodayDate()),
         api.getHabitCalendar(selectedMonth)
       ]);
       setHabits(habitsRes);
@@ -56,7 +57,7 @@ export function HabitsPage() {
 
   const handleToggleDaily = async (habitId) => {
     try {
-      await api.toggleHabitCompletion(habitId, { date: '2026-08-26' });
+      await api.toggleHabitCompletion(habitId, { date: getTodayDate() });
       await loadData();
     } catch (err) {
       console.error('Toggle habit error:', err);

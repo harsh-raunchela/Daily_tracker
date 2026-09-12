@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getTodayDate, getCurrentMonth } from '../utils/date.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ function calculateStreaksFromDates(dates) {
     if (tempStreak > longestStreak) longestStreak = tempStreak;
   }
 
-  const todayStr = '2026-08-26';
+  const todayStr = getTodayDate();
   const dateSet = new Set(sortedDates);
   let checkDate = new Date(todayStr);
   const fmt = (d) => d.toISOString().split('T')[0];
@@ -57,7 +58,7 @@ function calculateStreaksFromDates(dates) {
 router.get('/', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const todayStr = req.query.date || '2026-08-26';
+    const todayStr = req.query.date || getTodayDate();
 
     const habits = db.find('habits', h => h.userId === userId && h.active !== false);
     const todayRecords = db.find('habitRecords', r => r.userId === userId && r.date === todayStr);
@@ -166,7 +167,7 @@ router.post('/:id/completion', authenticateToken, (req, res) => {
     const userId = req.user.id;
     const habitId = req.params.id;
     const { date, completed, value, note } = req.body;
-    const targetDate = date || '2026-08-26';
+    const targetDate = date || getTodayDate();
 
     const habit = db.findOne('habits', h => h.id === habitId && h.userId === userId);
     if (!habit) return res.status(404).json({ message: 'Habit not found' });
@@ -213,7 +214,7 @@ router.post('/:id/completion', authenticateToken, (req, res) => {
 router.get('/calendar', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
-    const month = req.query.month || '2026-08';
+    const month = req.query.month || getCurrentMonth();
     const [yearStr, monthStr] = month.split('-');
     const year = parseInt(yearStr, 10);
     const monthNum = parseInt(monthStr, 10);

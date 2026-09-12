@@ -10,6 +10,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { api } from '../api';
+import { getTodayDate } from '../utils/date';
 
 const MOOD_OPTIONS = [
   { value: 1, label: 'Exhausted', glyph: '——' },
@@ -20,7 +21,7 @@ const MOOD_OPTIONS = [
 ];
 
 export function JournalPage() {
-  const [selectedDate, setSelectedDate] = useState('2026-08-26');
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [mood, setMood] = useState(4);
@@ -142,6 +143,15 @@ export function JournalPage() {
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="px-2 py-1 rounded bg-[#0e1113] border border-[#262822] text-[#cfc8ba] focus:outline-none focus:border-[#d9a441]"
                 />
+                {selectedDate !== getTodayDate() && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(getTodayDate())}
+                    className="px-2 py-1 rounded bg-[#1b1f23] hover:bg-[#262822] text-[10px] text-[#d9a441] border border-[#2b2e2b] transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
               </div>
 
               {/* Mood selector — Consider-style text glyphs */}

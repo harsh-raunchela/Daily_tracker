@@ -11,6 +11,7 @@ import { JournalPage } from './pages/JournalPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { RewardsPage } from './pages/RewardsPage';
 import { api } from './api';
+import { getTodayDate } from './utils/date';
 
 export function App() {
   const { user, loading } = useAuth();
@@ -21,7 +22,7 @@ export function App() {
 
   const fetchSummary = () => {
     if (user) {
-      api.getDashboard('2026-08-26')
+      api.getDashboard(getTodayDate())
         .then(res => setDashboardData(res))
         .catch(() => {});
     }

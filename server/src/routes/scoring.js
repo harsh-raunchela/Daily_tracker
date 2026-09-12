@@ -1,23 +1,24 @@
 import express from 'express';
 import { db } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getCurrentMonth, getElapsedDaysInMonth, getDaysInMonth } from '../utils/date.js';
 
 const router = express.Router();
 
-export function calculateMonthlyScore(userId, month = '2026-08') {
+export function calculateMonthlyScore(userId, month = null) {
+  const targetMonth = month || getCurrentMonth();
   const habits = db.find('habits', h => h.userId === userId && h.active !== false);
-  const [yearStr, monthStr] = month.split('-');
+  const [yearStr, monthStr] = targetMonth.split('-');
   const year = parseInt(yearStr, 10);
   const monthNum = parseInt(monthStr, 10);
-  const daysInMonth = new Date(year, monthNum, 0).getDate();
+  const daysInMonth = getDaysInMonth(targetMonth);
 
-  // Determine elapsed days in month (up to 26 if current month is August 2026)
-  const isCurrentMonth = month === '2026-08';
-  const elapsedDays = isCurrentMonth ? 26 : daysInMonth;
+  // Determine elapsed days in month dynamically
+  const elapsedDays = getElapsedDaysInMonth(targetMonth);
 
   if (habits.length === 0 || elapsedDays === 0) {
     return {
-      month,
+      month: targetMonth,
       score: 0,
       level: 'Getting Started',
       breakdown: {
@@ -30,7 +31,7 @@ export function calculateMonthlyScore(userId, month = '2026-08') {
   }
 
   // 1. Consistency (50%): Completed habit events / total expected habit events in elapsed days
-  const records = db.find('habitRecords', r => r.userId === userId && r.date.startsWith(month) && r.completed);
+  const records = db.find('habitRecords', r => r.userId === userId && r.date.startsWith(targetMonth) && r.completed);
   const totalExpected = habits.length * elapsedDays;
   const totalCompleted = records.length;
   const consistencyRate = Math.min(100, Math.round((totalCompleted / Math.max(1, totalExpected)) * 100));
@@ -49,15 +50,14 @@ export function calculateMonthlyScore(userId, month = '2026-08') {
   const streakScore = Math.min(100, Math.round((maxStreak / Math.min(30, elapsedDays)) * 100));
 
   // 4. Improvement over previous month (15%):
-  // Calculate previous month
   const prevMonthDate = new Date(year, monthNum - 2, 1);
   const prevYearStr = prevMonthDate.getFullYear();
   const prevMonthNumStr = (prevMonthDate.getMonth() + 1).toString().padStart(2, '0');
   const prevMonth = `${prevYearStr}-${prevMonthNumStr}`;
+  const prevDaysInMonth = getDaysInMonth(prevMonth);
 
   const prevRecords = db.find('habitRecords', r => r.userId === userId && r.date.startsWith(prevMonth) && r.completed);
-  const prevDays = new Date(prevYearStr, prevMonthDate.getMonth() + 1, 0).getDate();
-  const prevExpected = habits.length * prevDays;
+  const prevExpected = habits.length * prevDaysInMonth;
   const prevConsistency = prevExpected > 0 ? (prevRecords.length / prevExpected) * 100 : consistencyRate;
 
   let improvementScore = 70; // baseline if no change
@@ -84,7 +84,7 @@ export function calculateMonthlyScore(userId, month = '2026-08') {
   else if (totalScore >= 41) level = 'Getting Started';
 
   return {
-    month,
+    month: targetMonth,
     score: totalScore,
     level,
     breakdown: {
@@ -122,7 +122,7 @@ export function calculateMonthlyScore(userId, month = '2026-08') {
 // GET monthly score with transparent formula breakdown
 router.get('/monthly', authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const month = req.query.month || '2026-08';
+  const month = req.query.month || getCurrentMonth();
 
   const scoreData = calculateMonthlyScore(userId, month);
   res.json(scoreData);
@@ -131,7 +131,15 @@ router.get('/monthly', authenticateToken, (req, res) => {
 // GET historical scores for past months
 router.get('/history', authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const months = ['2026-05', '2026-06', '2026-07', '2026-08'];
+  const currentMonth = getCurrentMonth();
+  const [currY, currM] = currentMonth.split('-').map(Number);
+  
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currY, currM - 1 - i, 1);
+    const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push(mStr);
+  }
 
   const history = months.map(m => calculateMonthlyScore(userId, m));
   res.json(history);
