@@ -52,52 +52,62 @@ export function AnalyticsPage() {
 
   useEffect(() => { loadAnalytics(); }, []);
 
-  if (loading && !scoreData) {
+  if (loading || !scoreData) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[400px] font-mono text-xs text-[#7a7568]">
-        Loading analytics telemetry...
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-5 h-5 border-2 border-[#d9a441] border-t-transparent rounded-full animate-spin"></div>
+          <p>Loading analytics telemetry...</p>
+        </div>
       </div>
     );
   }
+
+  const breakdown = scoreData.breakdown || {};
+  const diffPct = breakdown.improvement?.diffPercentage ?? 0;
 
   const scoreBreakdown = [
     {
       label: 'Consistency',
       pct: '50%',
-      pts: scoreData.breakdown.consistency.points,
+      pts: breakdown.consistency?.weighted ?? 0,
       max: 50,
-      raw: `${scoreData.breakdown.consistency.rate}% habit completion`
+      raw: `${breakdown.consistency?.rawPercentage ?? breakdown.consistency?.score ?? 0}% habit completion`
     },
     {
       label: 'Difficulty',
       pct: '20%',
-      pts: scoreData.breakdown.difficulty.points,
+      pts: breakdown.difficulty?.weighted ?? 0,
       max: 20,
-      raw: `${scoreData.breakdown.difficulty.rate}% difficulty load`
+      raw: `${breakdown.difficulty?.avgDifficulty ?? 0}/5 difficulty load`
     },
     {
       label: 'Streaks',
       pct: '15%',
-      pts: scoreData.breakdown.streak.points,
+      pts: breakdown.streak?.weighted ?? 0,
       max: 15,
-      raw: `${scoreData.breakdown.streak.maxStreak} day max streak`
+      raw: `${breakdown.streak?.maxStreak ?? 0} day max streak`
     },
     {
       label: 'Improvement',
       pct: '15%',
-      pts: scoreData.breakdown.improvement.points,
+      pts: breakdown.improvement?.weighted ?? 0,
       max: 15,
-      raw: `${scoreData.breakdown.improvement.delta >= 0 ? '+' : ''}${scoreData.breakdown.improvement.delta}% vs prev month`,
-      accent: scoreData.breakdown.improvement.delta > 0
+      raw: `${diffPct >= 0 ? '+' : ''}${diffPct}% vs prev month`,
+      accent: diffPct > 0
     },
   ];
 
   const levelColor = {
+    'Elite': '#8fb896',
+    'Excellent': '#8fb896',
+    'Good': '#d9a441',
     'Unstoppable': '#8fb896',
     'High Performer': '#d9a441',
     'Consistent': '#cfc8ba',
     'Building Momentum': '#b5afa2',
-    'Getting Started': '#7a7568'
+    'Getting Started': '#7a7568',
+    'Needs Work': '#e06c58'
   }[scoreData.level] || '#cfc8ba';
 
   const currentMonthLabel = formatMonthTitle(scoreData?.month || getCurrentMonth());
@@ -258,37 +268,45 @@ export function AnalyticsPage() {
               </tr>
             </thead>
             <tbody className="text-xs divide-y divide-[#1b1f23]">
-              {analyticsData.habitComparison.map((item) => (
-                <tr
-                  key={item.habitId}
-                  className="hover:bg-[#121518] transition-colors"
-                >
-                  <td className="py-2.5 pr-4 font-semibold text-[#cfc8ba]">
-                    {item.name}
-                  </td>
-                  <td className="py-2.5 pr-4 text-[#7a7568]">
-                    {item.category}
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <span className="px-1.5 py-0.5 rounded bg-[#1b1f23] text-[#7a7568] text-[10px]">
-                      {item.difficulty}/5
-                    </span>
-                  </td>
-                  <td className="py-2.5 pr-4 text-[#b5afa2]">{item.prevRate ?? item.julyRate}%</td>
-                  <td className="py-2.5 pr-4 text-[#cfc8ba] font-bold">{item.currRate ?? item.augRate}%</td>
-                  <td className="py-2.5 text-right">
-                    <span className={`inline-flex items-center gap-0.5 font-bold ${
-                      item.diff >= 0 ? 'text-[#8fb896]' : 'text-[#e06c58]'
-                    }`}>
-                      {item.diff >= 0 ? (
-                        <><ArrowUpRight className="w-3 h-3" />+{item.diff}%</>
-                      ) : (
-                        <><ArrowDownRight className="w-3 h-3" />{item.diff}%</>
-                      )}
-                    </span>
+              {analyticsData?.habitComparison && analyticsData.habitComparison.length > 0 ? (
+                analyticsData.habitComparison.map((item) => (
+                  <tr
+                    key={item.habitId}
+                    className="hover:bg-[#121518] transition-colors"
+                  >
+                    <td className="py-2.5 pr-4 font-semibold text-[#cfc8ba]">
+                      {item.name}
+                    </td>
+                    <td className="py-2.5 pr-4 text-[#7a7568]">
+                      {item.category}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <span className="px-1.5 py-0.5 rounded bg-[#1b1f23] text-[#7a7568] text-[10px]">
+                        {item.difficulty}/5
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-[#b5afa2]">{item.prevRate ?? 0}%</td>
+                    <td className="py-2.5 pr-4 text-[#cfc8ba] font-bold">{item.currRate ?? 0}%</td>
+                    <td className="py-2.5 text-right">
+                      <span className={`inline-flex items-center gap-0.5 font-bold ${
+                        (item.diff ?? 0) >= 0 ? 'text-[#8fb896]' : 'text-[#e06c58]'
+                      }`}>
+                        {(item.diff ?? 0) >= 0 ? (
+                          <><ArrowUpRight className="w-3 h-3" />+{(item.diff ?? 0)}%</>
+                        ) : (
+                          <><ArrowDownRight className="w-3 h-3" />{(item.diff ?? 0)}%</>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="py-6 text-center text-[#7a7568] text-xs">
+                    No habit comparison data available for this period.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
